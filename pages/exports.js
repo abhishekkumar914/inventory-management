@@ -50,6 +50,12 @@ export default function Exports() {
     { mode: 'cash', amount: '' }
   ])
 
+  // Buyer search state
+  const [buyerSearchMode, setBuyerSearchMode] = useState('phone') // 'phone' or 'name'
+  const [buyerSearchQuery, setBuyerSearchQuery] = useState('')
+  const [buyerResults, setBuyerResults] = useState([])
+  const [showBuyerDropdown, setShowBuyerDropdown] = useState(false)
+
   useEffect(() => {
     fetchEntries()
   }, [])
@@ -60,15 +66,18 @@ export default function Exports() {
     try {
       const { data } = await supabase
         .from('export_customers')
-        .select('name, address, notes')
+        .select('name, phone, address, notes')
         .eq('phone', phone)
         .maybeSingle()
 
       if (data && data.name) {
         setFormData(prev => ({
           ...prev,
-          buyer_name: data.name
+          buyer_name: data.name,
+          buyer_phone: data.phone || prev.buyer_phone
         }))
+        setBuyerResults([])
+        setShowBuyerDropdown(false)
         setSuccess('Buyer found! Name autofilled.')
         setTimeout(() => setSuccess(''), 3000)
       } else {
@@ -78,6 +87,44 @@ export default function Exports() {
     } catch (err) {
       console.error('Error searching buyer:', err)
     }
+  }
+
+  const searchBuyerByName = async (name) => {
+    if (!name || name.length < 2) {
+      setBuyerResults([])
+      setShowBuyerDropdown(false)
+      return
+    }
+    try {
+      const { data } = await supabase
+        .from('export_customers')
+        .select('name, phone, address')
+        .ilike('name', `%${name}%`)
+        .limit(8)
+
+      if (data && data.length > 0) {
+        setBuyerResults(data)
+        setShowBuyerDropdown(true)
+      } else {
+        setBuyerResults([])
+        setShowBuyerDropdown(true)
+      }
+    } catch (err) {
+      console.error('Error searching buyer by name:', err)
+    }
+  }
+
+  const selectBuyerResult = (buyer) => {
+    setFormData(prev => ({
+      ...prev,
+      buyer_name: buyer.name,
+      buyer_phone: buyer.phone || ''
+    }))
+    setBuyerSearchQuery('')
+    setBuyerResults([])
+    setShowBuyerDropdown(false)
+    setSuccess('Buyer selected! Details autofilled.')
+    setTimeout(() => setSuccess(''), 3000)
   }
 
   // Multi-payment helpers
@@ -536,26 +583,66 @@ export default function Exports() {
                     placeholder="Buyer name"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Buyer Phone</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={formData.buyer_phone}
-                      onChange={(e) => setFormData({ ...formData, buyer_phone: e.target.value.replace(/\D/g, '') })}
-                      className="input flex-1"
-                      maxLength="10"
-                      placeholder="10-digit phone"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => searchBuyerByPhone(formData.buyer_phone)}
-                      disabled={formData.buyer_phone.length !== 10}
-                      className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-                    >
-                      Search
-                    </button>
+
+                {/* Buyer search toggle */}
+                <div className="col-span-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium text-gray-600">Search buyer by:</span>
+                    <div className="flex bg-gray-100 rounded-lg overflow-hidden border border-gray-200 text-xs font-semibold">
+                      <button type="button" onClick={() => { setBuyerSearchMode('phone'); setBuyerResults([]); setShowBuyerDropdown(false) }} className={`px-3 py-1.5 transition-all ${buyerSearchMode === 'phone' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}>Phone</button>
+                      <button type="button" onClick={() => { setBuyerSearchMode('name'); setBuyerResults([]); setShowBuyerDropdown(false) }} className={`px-3 py-1.5 transition-all ${buyerSearchMode === 'name' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}>Name</button>
+                    </div>
                   </div>
+
+                  {buyerSearchMode === 'phone' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Buyer Phone</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={formData.buyer_phone}
+                          onChange={(e) => setFormData({ ...formData, buyer_phone: e.target.value.replace(/\D/g, '') })}
+                          className="input flex-1"
+                          maxLength="10"
+                          placeholder="10-digit phone"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => searchBuyerByPhone(formData.buyer_phone)}
+                          disabled={formData.buyer_phone.length !== 10}
+                          className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                        >
+                          Search
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Search by Name</label>
+                      <input
+                        type="text"
+                        value={buyerSearchQuery}
+                        onChange={(e) => {
+                          setBuyerSearchQuery(e.target.value)
+                          searchBuyerByName(e.target.value)
+                        }}
+                        className="input w-full"
+                        placeholder="Type buyer name..."
+                      />
+                      {showBuyerDropdown && (
+                        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                          {buyerResults.length > 0 ? buyerResults.map((b, i) => (
+                            <button key={i} type="button" onClick={() => selectBuyerResult(b)} className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-gray-50 last:border-0 transition-colors">
+                              <span className="font-medium text-gray-800">{b.name}</span>
+                              <span className="text-gray-400 text-xs ml-2">{b.phone}</span>
+                            </button>
+                          )) : (
+                            <p className="px-4 py-3 text-sm text-gray-400">No buyers found</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Number</label>

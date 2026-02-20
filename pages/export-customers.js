@@ -33,6 +33,7 @@ export default function ExportCustomers() {
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [searchField, setSearchField] = useState('name') // 'name' | 'phone' | 'address'
 
   // Customer modal
   const [selectedCustomer, setSelectedCustomer] = useState(null)
@@ -277,10 +278,19 @@ export default function ExportCustomers() {
     URL.revokeObjectURL(url)
   }
 
-  const filteredCustomers = customers.filter(c =>
-    (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.phone.includes(searchTerm)
-  )
+  const filteredCustomers = customers.filter(c => {
+    if (!searchTerm) return true
+    const term = searchTerm.toLowerCase()
+    switch (searchField) {
+      case 'phone':
+        return c.phone.includes(searchTerm)
+      case 'address':
+        return (c.address || '').toLowerCase().includes(term)
+      case 'name':
+      default:
+        return (c.name || '').toLowerCase().includes(term)
+    }
+  })
 
   // Balance calculation from transactions
   const getBalance = () => {
@@ -349,17 +359,28 @@ export default function ExportCustomers() {
 
           {/* Search */}
           <div className="mb-6">
-            <div className="relative max-w-md">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              </span>
-              <input
-                type="text"
-                placeholder="Search by name or phone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full bg-white border-0 ring-1 ring-gray-200 rounded-lg py-2.5 text-sm focus:ring-2 focus:ring-primary-500 shadow-sm"
-              />
+            <div className="flex flex-col sm:flex-row gap-2 max-w-xl">
+              <select
+                value={searchField}
+                onChange={(e) => { setSearchField(e.target.value); setSearchTerm('') }}
+                className="bg-white border-0 ring-1 ring-gray-200 rounded-lg py-2.5 px-3 text-sm font-medium text-gray-700 focus:ring-2 focus:ring-primary-500 shadow-sm w-36 flex-shrink-0"
+              >
+                <option value="name">Name</option>
+                <option value="phone">Phone</option>
+                <option value="address">Address</option>
+              </select>
+              <div className="relative flex-1">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </span>
+                <input
+                  type="text"
+                  placeholder={`Search by ${searchField}...`}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full bg-white border-0 ring-1 ring-gray-200 rounded-lg py-2.5 text-sm focus:ring-2 focus:ring-primary-500 shadow-sm"
+                />
+              </div>
             </div>
           </div>
 
