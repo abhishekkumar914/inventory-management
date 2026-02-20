@@ -17,6 +17,10 @@ export default function Sales() {
   const [uploading, setUploading] = useState(false)
 
   const [searchTerm, setSearchTerm] = useState('')
+  const [customerSearchMode, setCustomerSearchMode] = useState('phone') // 'phone' or 'name'
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('')
+  const [customerResults, setCustomerResults] = useState([])
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
 
   const [formData, setFormData] = useState({
     customer_name: '',
@@ -49,7 +53,7 @@ export default function Sales() {
     fetchProducts()
   }, [])
 
-  // Auto-fill customer details when phone is entered
+  // Auto-fill customer details when phone or name is searched
   const checkCustomerPhone = async (phone) => {
     if (phone.length !== 10) {
         setError('Please enter a valid 10-digit phone number')
@@ -60,7 +64,7 @@ export default function Sales() {
     try {
         const { data, error } = await supabase
             .from('customers')
-            .select('name, aadhaar_number, aadhaar_photo_url') // Select needed fields
+            .select('name, phone, aadhaar_number, aadhaar_photo_url')
             .eq('phone', phone)
             .maybeSingle()
 
@@ -68,10 +72,13 @@ export default function Sales() {
             setFormData(prev => ({
                 ...prev,
                 customer_name: data.name,
+                phone: data.phone,
                 aadhaar_number: data.aadhaar_number || '',
                 existing_photo_url: data.aadhaar_photo_url || null
             }))
-            setSuccess('Customer found! details autofilled.')
+            setCustomerResults([])
+            setShowCustomerDropdown(false)
+            setSuccess('Customer found! Details autofilled.')
             setTimeout(() => setSuccess(''), 3000)
         } else {
             setSuccess('Customer not found. Please enter details.')
@@ -80,6 +87,46 @@ export default function Sales() {
     } catch (err) {
         console.error('Error searching customer:', err)
     }
+  }
+
+  const searchCustomerByName = async (name) => {
+    if (!name || name.length < 2) {
+      setCustomerResults([])
+      setShowCustomerDropdown(false)
+      return
+    }
+    try {
+      const { data } = await supabase
+        .from('customers')
+        .select('name, phone, aadhaar_number, aadhaar_photo_url')
+        .ilike('name', `%${name}%`)
+        .limit(8)
+
+      if (data && data.length > 0) {
+        setCustomerResults(data)
+        setShowCustomerDropdown(true)
+      } else {
+        setCustomerResults([])
+        setShowCustomerDropdown(true) // show "no results"
+      }
+    } catch (err) {
+      console.error('Error searching customer by name:', err)
+    }
+  }
+
+  const selectCustomerResult = (customer) => {
+    setFormData(prev => ({
+      ...prev,
+      customer_name: customer.name,
+      phone: customer.phone || '',
+      aadhaar_number: customer.aadhaar_number || '',
+      existing_photo_url: customer.aadhaar_photo_url || null
+    }))
+    setCustomerSearchQuery('')
+    setCustomerResults([])
+    setShowCustomerDropdown(false)
+    setSuccess('Customer selected! Details autofilled.')
+    setTimeout(() => setSuccess(''), 3000)
   }
 
   const fetchSales = async () => {
@@ -816,6 +863,63 @@ export default function Sales() {
               {/* Customer Information */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Customer Information</h3>
+                
+                {/* Search mode toggle */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-sm font-medium text-gray-600">Search by:</span>
+                  <div className="flex bg-gray-100 rounded-lg overflow-hidden border border-gray-200 text-xs font-semibold">
+                    <button type="button" onClick={() => { setCustomerSearchMode('phone'); setCustomerResults([]); setShowCustomerDropdown(false) }} className={`px-3 py-1.5 transition-all ${customerSearchMode === 'phone' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}>Phone</button>
+                    <button type="button" onClick={() => { setCustomerSearchMode('name'); setCustomerResults([]); setShowCustomerDropdown(false) }} className={`px-3 py-1.5 transition-all ${customerSearchMode === 'name' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}>Name</button>
+                  </div>
+                </div>
+
+                {/* Search input */}
+                {customerSearchMode === 'phone' ? (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number (10 digits)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={formData.phone}
+                        onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '')
+                            setFormData({ ...formData, phone: val })
+                        }}
+                        className="input flex-1"
+                        maxLength="10"
+                        placeholder="Enter phone number"
+                      />
+                      <button type="button" onClick={() => checkCustomerPhone(formData.phone)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 whitespace-nowrap">Search</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-4 relative">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Search by Name</label>
+                    <input
+                      type="text"
+                      value={customerSearchQuery}
+                      onChange={(e) => {
+                        setCustomerSearchQuery(e.target.value)
+                        searchCustomerByName(e.target.value)
+                      }}
+                      className="input w-full"
+                      placeholder="Type customer name..."
+                    />
+                    {showCustomerDropdown && (
+                      <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {customerResults.length > 0 ? customerResults.map((c, i) => (
+                          <button key={i} type="button" onClick={() => selectCustomerResult(c)} className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-gray-50 last:border-0 transition-colors">
+                            <span className="font-medium text-gray-800">{c.name}</span>
+                            <span className="text-gray-400 text-xs ml-2">{c.phone}</span>
+                          </button>
+                        )) : (
+                          <p className="px-4 py-3 text-sm text-gray-400">No customers found</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -830,30 +934,19 @@ export default function Sales() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone Number (10 digits)
-                    </label>
-                    <div className="flex gap-2">
+                  {customerSearchMode === 'name' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                       <input
                         type="text"
                         value={formData.phone}
-                        onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '')
-                            setFormData({ ...formData, phone: val })
-                        }}
-                        className="input flex-1"
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
+                        className="input"
                         maxLength="10"
+                        placeholder="10-digit phone"
                       />
-                      <button
-                        type="button"
-                        onClick={() => checkCustomerPhone(formData.phone)}
-                        className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                      >
-                        Search
-                      </button>
                     </div>
-                  </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
