@@ -1,0 +1,47 @@
+"filename", "language", "JavaScript", "MS SQL", "PostCSS", "Markdown", "JSON", "JSON with Comments", "comment", "blank", "total"
+"c:\Codes\BUILDS\abhishek inventory\DOCUMENTATION-INDEX.md", "Markdown", 0, 0, 0, 215, 0, 0, 0, 75, 290
+"c:\Codes\BUILDS\abhishek inventory\FILE-STRUCTURE.md", "Markdown", 0, 0, 0, 174, 0, 0, 0, 33, 207
+"c:\Codes\BUILDS\abhishek inventory\PROJECT-SUMMARY.md", "Markdown", 0, 0, 0, 296, 0, 0, 0, 79, 375
+"c:\Codes\BUILDS\abhishek inventory\QUICKSTART.md", "Markdown", 0, 0, 0, 153, 0, 0, 0, 57, 210
+"c:\Codes\BUILDS\abhishek inventory\README.md", "Markdown", 0, 0, 0, 260, 0, 0, 0, 74, 334
+"c:\Codes\BUILDS\abhishek inventory\SETUP.md", "Markdown", 0, 0, 0, 132, 0, 0, 0, 42, 174
+"c:\Codes\BUILDS\abhishek inventory\WINDOWS-INSTALL.md", "Markdown", 0, 0, 0, 218, 0, 0, 0, 64, 282
+"c:\Codes\BUILDS\abhishek inventory\components\Layout.js", "JavaScript", 179, 0, 0, 0, 0, 0, 2, 18, 199
+"c:\Codes\BUILDS\abhishek inventory\components\Modal.js", "JavaScript", 39, 0, 0, 0, 0, 0, 0, 5, 44
+"c:\Codes\BUILDS\abhishek inventory\components\ProtectedRoute.js", "JavaScript", 12, 0, 0, 0, 0, 0, 0, 4, 16
+"c:\Codes\BUILDS\abhishek inventory\jsconfig.json", "JSON with Comments", 0, 0, 0, 0, 0, 9, 0, 1, 10
+"c:\Codes\BUILDS\abhishek inventory\lib\supabase.js", "JavaScript", 7, 0, 0, 0, 0, 0, 0, 4, 11
+"c:\Codes\BUILDS\abhishek inventory\lib\utils.js", "JavaScript", 73, 0, 0, 0, 0, 0, 5, 20, 98
+"c:\Codes\BUILDS\abhishek inventory\next.config.js", "JavaScript", 6, 0, 0, 0, 0, 0, 1, 2, 9
+"c:\Codes\BUILDS\abhishek inventory\package-lock.json", "JSON", 0, 0, 0, 0, 6003, 0, 0, 1, 6004
+"c:\Codes\BUILDS\abhishek inventory\package.json", "JSON", 0, 0, 0, 0, 28, 0, 0, 1, 29
+"c:\Codes\BUILDS\abhishek inventory\pages\_app.js", "JavaScript", 4, 0, 0, 0, 0, 0, 0, 2, 6
+"c:\Codes\BUILDS\abhishek inventory\pages\api\auth\login.js", "JavaScript", 12, 0, 0, 0, 0, 0, 1, 5, 18
+"c:\Codes\BUILDS\abhishek inventory\pages\api\auth\logout.js", "JavaScript", 6, 0, 0, 0, 0, 0, 0, 2, 8
+"c:\Codes\BUILDS\abhishek inventory\pages\customers.js", "JavaScript", 1033, 0, 0, 0, 0, 0, 26, 101, 1160
+"c:\Codes\BUILDS\abhishek inventory\pages\dashboard.js", "JavaScript", 664, 0, 0, 0, 0, 0, 13, 66, 743
+"c:\Codes\BUILDS\abhishek inventory\pages\exports.js", "JavaScript", 556, 0, 0, 0, 0, 0, 5, 39, 600
+"c:\Codes\BUILDS\abhishek inventory\pages\index.js", "JavaScript", 90, 0, 0, 0, 0, 0, 2, 12, 104
+"c:\Codes\BUILDS\abhishek inventory\pages\products.js", "JavaScript", 688, 0, 0, 0, 0, 0, 5, 57, 750
+"c:\Codes\BUILDS\abhishek inventory\pages\sales.js", "JavaScript", 1215, 0, 0, 0, 0, 0, 32, 106, 1353
+"c:\Codes\BUILDS\abhishek inventory\postcss.config.js", "JavaScript", 6, 0, 0, 0, 0, 0, 0, 1, 7
+"c:\Codes\BUILDS\abhishek inventory\styles\globals.css", "PostCSS", 0, 0, 78, 0, 0, 0, 3, 16, 97
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\001_initial_schema.sql", "MS SQL", 0, 78, 0, 0, 0, 0, 11, 14, 103
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\002_security_policies.sql", "MS SQL", 0, 12, 0, 0, 0, 0, 3, 6, 21
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\003_customers_table.sql", "MS SQL", 0, 17, 0, 0, 0, 0, 3, 3, 23
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\004_customer_ledger.sql", "MS SQL", 0, 14, 0, 0, 0, 0, 3, 3, 20
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\005_add_unit_cost.sql", "MS SQL", 0, 2, 0, 0, 0, 0, 3, 2, 7
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\006_fix_permissions.sql", "MS SQL", 0, 20, 0, 0, 0, 0, 6, 6, 32
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\007_add_aadhaar_to_customers.sql", "MS SQL", 0, 11, 0, 0, 0, 0, 3, 2, 16
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\008_storage_policies.sql", "MS SQL", 0, 22, 0, 0, 0, 0, 8, 6, 36
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\009_images_bucket_policies.sql", "MS SQL", 0, 22, 0, 0, 0, 0, 5, 6, 33
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\010_fix_storage_final.sql", "MS SQL", 0, 14, 0, 0, 0, 0, 9, 5, 28
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\011_fix_storage_owner_bypass.sql", "MS SQL", 0, 16, 0, 0, 0, 0, 10, 4, 30
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\012_add_photo_to_customers.sql", "MS SQL", 0, 11, 0, 0, 0, 0, 3, 2, 16
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\013_add_address_to_customers.sql", "MS SQL", 0, 2, 0, 0, 0, 0, 1, 1, 4
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\014_exports_table.sql", "MS SQL", 0, 40, 0, 0, 0, 0, 5, 5, 50
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\015_aadhaar_optional_payment_mode.sql", "MS SQL", 0, 3, 0, 0, 0, 0, 4, 3, 10
+"c:\Codes\BUILDS\abhishek inventory\supabase\migrations\016_sale_payments.sql", "MS SQL", 0, 13, 0, 0, 0, 0, 3, 3, 19
+"c:\Codes\BUILDS\abhishek inventory\supabase\sample-data.sql", "MS SQL", 0, 17, 0, 0, 0, 0, 9, 4, 30
+"c:\Codes\BUILDS\abhishek inventory\tailwind.config.js", "JavaScript", 26, 0, 0, 0, 0, 0, 1, 1, 28
+"Total", "-", 4616, 314, 78, 1448, 6031, 9, 185, 963, 13644
