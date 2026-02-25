@@ -325,7 +325,15 @@ export default function Customers() {
 
   const fetchCustomers = async () => {
     try {
-      // 1. Fetch Sales Data
+      // 1. Fetch ALL Customer Profiles (source of truth)
+      const { data: profiles, error: profileError } = await supabase
+        .from('customers')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (profileError) throw profileError
+
+      // 2. Fetch Sales Data
       const { data: salesData, error: salesError } = await supabase
         .from('sales')
         .select(`
@@ -339,17 +347,6 @@ export default function Customers() {
 
       if (salesError) throw salesError
 
-      // 2. Fetch Real Customer Profiles (if table exists)
-      const { data: profiles, error: profileError } = await supabase
-        .from('customers')
-        .select('*')
-      
-      // If table doesn't exist yet, profiles will be null/error, which we can ignore
-      const profileMap = new Map()
-      if (profiles) {
-        profiles.forEach(p => profileMap.set(p.phone, p))
-      }
-
       // Process for Activity Log (Last 10 sales)
       const activity = salesData.slice(0, 10).map(sale => ({
         id: sale.id,
@@ -360,77 +357,115 @@ export default function Customers() {
       }))
       setRecentActivity(activity)
 
-      // Group by Customer from Sales
-      const customerMap = new Map()
-
+      // Group sales by phone for fast lookup
+      const salesByPhone = new Map()
       salesData?.forEach(sale => {
-        const key = sale.phone
-        
-        if (!customerMap.has(key)) {
-          // Initialize with real profile data if available
-          const profile = profileMap.get(key) || {}
-          
-          customerMap.set(key, {
-            id: key, // phone as ID for grouping
-            profile_id: profile.id, // Real UUID from DB
-            customer_name: profile.name || sale.customer_name, // Prefer profile name
-            phone: sale.phone,
-            email: profile.email || '', 
-            aadhaar_number: profile.aadhaar_number || sale.aadhaar_number || '',
-            aadhaar_photo_url: profile.aadhaar_photo_url || sale.aadhaar_photo_url || null,
-            address: profile.address || '',
-            purchases: [],
-            totalSpent: 0,
-            totalPurchases: 0,
-            rating: profile.rating || 5.0, // Use real rating or default
-            notes: profile.notes || '',
-            is_vip: profile.is_vip || false,
-            is_banned: profile.is_banned || false,
-            lastOrderDate: null
-          })
-        }
+        if (!sale.phone) return
+        if (!salesByPhone.has(sale.phone)) salesByPhone.set(sale.phone, [])
+        salesByPhone.get(sale.phone).push(sale)
+      })
 
-        const customer = customerMap.get(key)
-        const saleTotal = sale.sale_items.reduce((sum, item) => sum + (item.price_at_sale * item.quantity), 0)
+      // Build entries for every profile in the customers table
+      const profilePhones = new Set(profiles.map(p => p.phone))
 
-        customer.purchases.push({ ...sale, total: saleTotal })
-        customer.totalSpent += saleTotal
-        customer.totalPurchases += 1
-        
-        const saleDate = new Date(sale.created_at)
-        if (!customer.lastOrderDate || saleDate > customer.lastOrderDate) {
-          customer.lastOrderDate = saleDate
+      const profileEntries = profiles.map(profile => {
+        const customerSales = salesByPhone.get(profile.phone) || []
+        let totalSpent = 0, totalPurchases = 0, lastOrderDate = null
+        const purchases = []
+
+        customerSales.forEach(sale => {
+          const saleTotal = sale.sale_items.reduce((sum, item) => sum + (item.price_at_sale * item.quantity), 0)
+          purchases.push({ ...sale, total: saleTotal })
+          totalSpent += saleTotal
+          totalPurchases += 1
+          const saleDate = new Date(sale.created_at)
+          if (!lastOrderDate || saleDate > lastOrderDate) lastOrderDate = saleDate
+        })
+
+        return {
+          id: profile.phone || profile.id,
+          profile_id: profile.id,
+          customer_name: profile.name,
+          phone: profile.phone,
+          email: profile.email || '',
+          aadhaar_number: profile.aadhaar_number || '',
+          aadhaar_photo_url: profile.aadhaar_photo_url || null,
+          address: profile.address || '',
+          purchases,
+          totalSpent,
+          totalPurchases,
+          rating: profile.rating || 5.0,
+          notes: profile.notes || '',
+          is_vip: profile.is_vip || false,
+          is_banned: profile.is_banned || false,
+          lastOrderDate
         }
       })
 
+      // Also include sale-only customers (have sales but no profile entry)
+      const saleOnlyMap = new Map()
+      salesData?.forEach(sale => {
+        const key = sale.phone
+        if (!key || profilePhones.has(key)) return // skip if already covered by a profile
+        if (!saleOnlyMap.has(key)) {
+          saleOnlyMap.set(key, {
+            id: key,
+            profile_id: null,
+            customer_name: sale.customer_name,
+            phone: sale.phone,
+            email: '',
+            aadhaar_number: sale.aadhaar_number || '',
+            aadhaar_photo_url: sale.aadhaar_photo_url || null,
+            address: '',
+            purchases: [],
+            totalSpent: 0,
+            totalPurchases: 0,
+            rating: 5.0,
+            notes: '',
+            is_vip: false,
+            is_banned: false,
+            lastOrderDate: null
+          })
+        }
+        const c = saleOnlyMap.get(key)
+        const saleTotal = sale.sale_items.reduce((sum, item) => sum + (item.price_at_sale * item.quantity), 0)
+        c.purchases.push({ ...sale, total: saleTotal })
+        c.totalSpent += saleTotal
+        c.totalPurchases += 1
+        const saleDate = new Date(sale.created_at)
+        if (!c.lastOrderDate || saleDate > c.lastOrderDate) c.lastOrderDate = saleDate
+      })
+
+      const allCustomers = [...profileEntries, ...Array.from(saleOnlyMap.values())]
+
       // Add badges and finalize
-      const processedCustomers = Array.from(customerMap.values()).map(c => {
+      const processedCustomers = allCustomers.map(c => {
         const badges = []
-        
-        // Logic for badges
         if (c.is_banned) badges.push('banned')
-        else if (c.is_vip) badges.push('vip') // Explicit VIP from DB
+        else if (c.is_vip) badges.push('vip')
         else if (c.totalPurchases > 1) badges.push('returning')
         else badges.push('new')
-        
-        // Auto-VIP logic if not set in DB
         if (!c.is_vip && c.totalSpent > 10000) badges.push('vip')
-        
-        // Determine favorite items
+
         const itemCounts = {}
         c.purchases.forEach(p => {
-            p.sale_items.forEach(item => {
-                const pName = item.products?.name || 'Unknown Item'
-                itemCounts[pName] = (itemCounts[pName] || 0) + item.quantity
-            })
+          p.sale_items.forEach(item => {
+            const pName = item.products?.name || 'Unknown Item'
+            itemCounts[pName] = (itemCounts[pName] || 0) + item.quantity
+          })
         })
         const FavoriteItems = Object.entries(itemCounts)
-            .sort((a,b) => b[1] - a[1])
-            .slice(0, 4)
-            .map(([name]) => name)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 4)
+          .map(([name]) => name)
 
         return { ...c, badges, FavoriteItems }
-      }).sort((a, b) => b.lastOrderDate - a.lastOrderDate)
+      }).sort((a, b) => {
+        if (!a.lastOrderDate && !b.lastOrderDate) return 0
+        if (!a.lastOrderDate) return 1
+        if (!b.lastOrderDate) return -1
+        return b.lastOrderDate - a.lastOrderDate
+      })
 
       setCustomers(processedCustomers)
     } catch (err) {

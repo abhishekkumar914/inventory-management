@@ -96,19 +96,37 @@ export default function Sales() {
       return
     }
     try {
-      const { data } = await supabase
+      // Search customers profile table
+      const { data: profileData } = await supabase
         .from('customers')
         .select('name, phone, aadhaar_number, aadhaar_photo_url')
         .ilike('name', `%${name}%`)
         .limit(8)
 
-      if (data && data.length > 0) {
-        setCustomerResults(data)
-        setShowCustomerDropdown(true)
-      } else {
-        setCustomerResults([])
-        setShowCustomerDropdown(true) // show "no results"
-      }
+      // Also search sales table for customers not yet in profiles
+      const { data: salesData } = await supabase
+        .from('sales')
+        .select('customer_name, phone, aadhaar_number, aadhaar_photo_url')
+        .ilike('customer_name', `%${name}%`)
+        .limit(8)
+
+      // Merge, deduplicating by phone
+      const seen = new Set()
+      const merged = []
+      ;(profileData || []).forEach(c => {
+        const key = c.phone || c.name
+        if (!seen.has(key)) { seen.add(key); merged.push(c) }
+      })
+      ;(salesData || []).forEach(s => {
+        const key = s.phone || s.customer_name
+        if (!seen.has(key)) {
+          seen.add(key)
+          merged.push({ name: s.customer_name, phone: s.phone, aadhaar_number: s.aadhaar_number, aadhaar_photo_url: s.aadhaar_photo_url })
+        }
+      })
+
+      setCustomerResults(merged.slice(0, 8))
+      setShowCustomerDropdown(true)
     } catch (err) {
       console.error('Error searching customer by name:', err)
     }
