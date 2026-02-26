@@ -98,8 +98,13 @@ export default function Customers() {
 
   const handleCreateCustomer = async (e) => {
     e.preventDefault()
-    if (!newCustomerData.phone || newCustomerData.phone.length !== 10) {
-        alert("Please enter a valid 10-digit phone number")
+    if (!newCustomerData.name || newCustomerData.name.trim().length === 0) {
+        alert("Please enter a customer name")
+        return
+    }
+    // Validate phone only if provided
+    if (newCustomerData.phone && newCustomerData.phone.length !== 10) {
+        alert("Phone number must be exactly 10 digits if provided")
         return
     }
 
@@ -108,7 +113,7 @@ export default function Customers() {
             .from('customers')
             .insert([{
                 name: newCustomerData.name,
-                phone: newCustomerData.phone,
+                phone: newCustomerData.phone || null,
                 email: newCustomerData.email,
                 aadhaar_number: newCustomerData.aadhaar_number,
                 address: newCustomerData.address
@@ -132,27 +137,28 @@ export default function Customers() {
       // Ensure customer exists in DB
       if (!profileId) {
           try {
-              // Try to find existing first
-              const { data: existing, error: findError } = await supabase
-                  .from('customers')
-                  .select('id')
-                  .eq('phone', customer.phone)
-                  .single()
+              let existing = null
+
+              // Try to find by phone first (if available)
+              if (customer.phone) {
+                  const { data } = await supabase
+                      .from('customers')
+                      .select('id')
+                      .eq('phone', customer.phone)
+                      .maybeSingle()
+                  existing = data
+              }
 
               if (existing) {
                   profileId = existing.id
               } else {
-                  // If not found, create new
-                  const payload = { 
-                      phone: customer.phone, 
-                      name: customer.customer_name 
+                  // Create new profile — phone optional
+                  const payload = {
+                      name: customer.customer_name,
+                      phone: customer.phone || null
                   }
-                  if (customer.aadhaar_number) {
-                      payload.aadhaar_number = customer.aadhaar_number
-                  }
-                  if (customer.address) {
-                      payload.address = customer.address
-                  }
+                  if (customer.aadhaar_number) payload.aadhaar_number = customer.aadhaar_number
+                  if (customer.address) payload.address = customer.address
 
                   const { data, error } = await supabase
                       .from('customers')
@@ -164,10 +170,7 @@ export default function Customers() {
                   profileId = data.id
               }
               
-              // Update local state to avoid re-creation
               customer.profile_id = profileId
-              
-              // Refresh main list quietly
               fetchCustomers()
           } catch (err) {
               console.error("Error creating/finding customer profile:", err)
@@ -1156,15 +1159,14 @@ export default function Customers() {
                 />
             </div>
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number <span className="text-gray-400 font-normal">(optional)</span></label>
                 <input 
                     type="text" 
                     value={newCustomerData.phone} 
                     onChange={e => setNewCustomerData({...newCustomerData, phone: e.target.value.replace(/\D/g, '')})}
                     className="input"
                     maxLength="10"
-                    placeholder="10 digit mobile number"
-                    required 
+                    placeholder="10 digit mobile number (optional)"
                 />
             </div>
             <div>

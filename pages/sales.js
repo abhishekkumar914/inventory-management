@@ -302,19 +302,21 @@ export default function Sales() {
       }
 
       // 1. Ensure Customer Profile Exists & Update details
-      // We only try to sync to customers table if we have a phone number (unique key)
       let customerCreated = false
-      if (formData.phone && formData.phone.length === 10) {
+      const customerName = formData.customer_name || 'Walk-in Customer'
+      const hasPhone = formData.phone && formData.phone.length === 10
+
+      if (hasPhone) {
+          // Customer with phone — upsert by phone (unique key)
           const profileUpdate = { 
                phone: formData.phone, 
-               name: formData.customer_name || 'Walk-in Customer',
+               name: customerName,
                aadhaar_number: formData.aadhaar_number || null
           }
           if (aadhaarPhotoUrl) {
               profileUpdate.aadhaar_photo_url = aadhaarPhotoUrl
           }
 
-          // Check if this is a new customer
           const { data: existingCustomer } = await supabase
             .from('customers')
             .select('id')
@@ -334,6 +336,34 @@ export default function Sales() {
               setTimeout(() => setError(''), 5000)
           } else if (!existingCustomer) {
               customerCreated = true
+          }
+      } else if (customerName && customerName !== 'Walk-in Customer') {
+          // Customer without phone — create by name only (no upsert, just insert if new)
+          const { data: existingByName } = await supabase
+            .from('customers')
+            .select('id')
+            .ilike('name', customerName)
+            .is('phone', null)
+            .maybeSingle()
+
+          if (!existingByName) {
+              const profileInsert = {
+                  name: customerName,
+                  phone: null,
+                  aadhaar_number: formData.aadhaar_number || null
+              }
+              if (aadhaarPhotoUrl) {
+                  profileInsert.aadhaar_photo_url = aadhaarPhotoUrl
+              }
+              const { error: profileError } = await supabase
+                .from('customers')
+                .insert([profileInsert])
+
+              if (profileError) {
+                  console.error("Could not create customer profile:", profileError)
+              } else {
+                  customerCreated = true
+              }
           }
       }
 
@@ -473,6 +503,8 @@ export default function Sales() {
     setSaleItems([{ product_id: '', quantity: 1, custom_price: '' }])
     setPayments([{ mode: 'cash', amount: '' }])
     setIsNewCustomer(false)
+    setCustomerSearchMode('phone')
+    setCustomerSearchQuery('')
   }
 
   // Multi-payment helpers
@@ -906,10 +938,26 @@ export default function Sales() {
                     <button type="button" onClick={() => { setCustomerSearchMode('phone'); setCustomerResults([]); setShowCustomerDropdown(false) }} className={`px-3 py-1.5 transition-all ${customerSearchMode === 'phone' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}>Phone</button>
                     <button type="button" onClick={() => { setCustomerSearchMode('name'); setCustomerResults([]); setShowCustomerDropdown(false) }} className={`px-3 py-1.5 transition-all ${customerSearchMode === 'name' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}>Name</button>
                   </div>
+                  <button 
+                    type="button" 
+                    onClick={() => { 
+                      setCustomerSearchMode('direct'); 
+                      setCustomerResults([]); 
+                      setShowCustomerDropdown(false);
+                      setIsNewCustomer(true)
+                    }} 
+                    className="ml-auto text-xs text-gray-500 hover:text-blue-600 underline"
+                  >
+                    Skip search — just type name
+                  </button>
                 </div>
 
                 {/* Search input */}
-                {customerSearchMode === 'phone' ? (
+                {customerSearchMode === 'direct' ? (
+                  <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                    <p className="text-sm text-blue-800 mb-1">Quick entry — just fill in the customer name below. Phone is optional.</p>
+                  </div>
+                ) : customerSearchMode === 'phone' ? (
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number (10 digits)</label>
                     <div className="flex gap-2">
@@ -967,7 +1015,7 @@ export default function Sales() {
                 {isNewCustomer && (
                   <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center gap-2">
                     <span className="bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded">NEW</span>
-                    <span className="text-sm text-green-800">New customer — will be automatically saved to your customer list when this sale is created.</span>
+                    <span className="text-sm text-green-800">New customer — just enter a name and they'll be saved automatically. Phone is optional.</span>
                   </div>
                 )}
 
@@ -985,16 +1033,16 @@ export default function Sales() {
                     />
                   </div>
 
-                  {customerSearchMode === 'name' && (
+                  {(customerSearchMode === 'name' || customerSearchMode === 'direct') && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number <span className="text-gray-400 font-normal">(optional)</span></label>
                       <input
                         type="text"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
                         className="input"
                         maxLength="10"
-                        placeholder="10-digit phone"
+                        placeholder="10-digit phone (optional)"
                       />
                     </div>
                   )}

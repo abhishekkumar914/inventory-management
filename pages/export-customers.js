@@ -123,8 +123,12 @@ export default function ExportCustomers() {
 
   const handleCreateCustomer = async (e) => {
     e.preventDefault()
-    if (!newCustomerData.phone || newCustomerData.phone.length !== 10) {
-      alert('Please enter a valid 10-digit phone number')
+    if (!newCustomerData.name || newCustomerData.name.trim() === '') {
+      alert('Please enter a customer name')
+      return
+    }
+    if (newCustomerData.phone && newCustomerData.phone.length !== 10) {
+      alert('Phone number must be exactly 10 digits if provided')
       return
     }
 
@@ -133,7 +137,7 @@ export default function ExportCustomers() {
         .from('export_customers')
         .insert([{
           name: newCustomerData.name,
-          phone: newCustomerData.phone,
+          phone: newCustomerData.phone || null,
           email: newCustomerData.email || null,
           address: newCustomerData.address || null
         }])
@@ -660,15 +664,14 @@ export default function ExportCustomers() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number <span className="text-gray-400 font-normal">(optional)</span></label>
               <input
                 type="text"
                 value={newCustomerData.phone}
                 onChange={e => setNewCustomerData({...newCustomerData, phone: e.target.value.replace(/\D/g, '')})}
                 className="input"
                 maxLength="10"
-                placeholder="10-digit phone number"
-                required
+                placeholder="10-digit phone number (optional)"
               />
             </div>
             <div>
