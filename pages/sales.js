@@ -21,6 +21,7 @@ export default function Sales() {
   const [customerSearchQuery, setCustomerSearchQuery] = useState('')
   const [customerResults, setCustomerResults] = useState([])
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
+  const [isNewCustomer, setIsNewCustomer] = useState(false)
 
   const [formData, setFormData] = useState({
     customer_name: '',
@@ -78,11 +79,13 @@ export default function Sales() {
             }))
             setCustomerResults([])
             setShowCustomerDropdown(false)
+            setIsNewCustomer(false)
             setSuccess('Customer found! Details autofilled.')
             setTimeout(() => setSuccess(''), 3000)
         } else {
-            setSuccess('Customer not found. Please enter details.')
-            setTimeout(() => setSuccess(''), 3000)
+            setIsNewCustomer(true)
+            setSuccess('New customer! Fill in the details below and they will be saved automatically.')
+            setTimeout(() => setSuccess(''), 5000)
         }
     } catch (err) {
         console.error('Error searching customer:', err)
@@ -143,6 +146,7 @@ export default function Sales() {
     setCustomerSearchQuery('')
     setCustomerResults([])
     setShowCustomerDropdown(false)
+    setIsNewCustomer(false)
     setSuccess('Customer selected! Details autofilled.')
     setTimeout(() => setSuccess(''), 3000)
   }
@@ -299,15 +303,23 @@ export default function Sales() {
 
       // 1. Ensure Customer Profile Exists & Update details
       // We only try to sync to customers table if we have a phone number (unique key)
+      let customerCreated = false
       if (formData.phone && formData.phone.length === 10) {
           const profileUpdate = { 
                phone: formData.phone, 
                name: formData.customer_name || 'Walk-in Customer',
-               aadhaar_number: formData.aadhaar_number
+               aadhaar_number: formData.aadhaar_number || null
           }
           if (aadhaarPhotoUrl) {
               profileUpdate.aadhaar_photo_url = aadhaarPhotoUrl
           }
+
+          // Check if this is a new customer
+          const { data: existingCustomer } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('phone', formData.phone)
+            .maybeSingle()
 
           const { error: profileError } = await supabase
             .from('customers')
@@ -317,7 +329,11 @@ export default function Sales() {
             )
           
           if (profileError) {
-              console.warn("Could not sync customer profile:", profileError)
+              console.error("Could not sync customer profile:", profileError)
+              setError('Sale saved but failed to create customer profile: ' + profileError.message)
+              setTimeout(() => setError(''), 5000)
+          } else if (!existingCustomer) {
+              customerCreated = true
           }
       }
 
@@ -433,7 +449,7 @@ export default function Sales() {
           }
       }
 
-      setSuccess('Sale created successfully!')
+      setSuccess(customerCreated ? 'Sale created & new customer added successfully!' : 'Sale created successfully!')
       fetchSales()
       resetForm()
       setShowModal(false)
@@ -456,6 +472,7 @@ export default function Sales() {
     })
     setSaleItems([{ product_id: '', quantity: 1, custom_price: '' }])
     setPayments([{ mode: 'cash', amount: '' }])
+    setIsNewCustomer(false)
   }
 
   // Multi-payment helpers
@@ -931,10 +948,26 @@ export default function Sales() {
                             <span className="text-gray-400 text-xs ml-2">{c.phone}</span>
                           </button>
                         )) : (
-                          <p className="px-4 py-3 text-sm text-gray-400">No customers found</p>
+                          <button type="button" onClick={() => {
+                            setFormData(prev => ({ ...prev, customer_name: customerSearchQuery }))
+                            setShowCustomerDropdown(false)
+                            setIsNewCustomer(true)
+                            setSuccess('New customer! Fill in phone and other details below.')
+                            setTimeout(() => setSuccess(''), 5000)
+                          }} className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors">
+                            <span className="text-green-700 font-medium">+ Create new customer "{customerSearchQuery}"</span>
+                          </button>
                         )}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* New Customer Badge */}
+                {isNewCustomer && (
+                  <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center gap-2">
+                    <span className="bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded">NEW</span>
+                    <span className="text-sm text-green-800">New customer — will be automatically saved to your customer list when this sale is created.</span>
                   </div>
                 )}
 
